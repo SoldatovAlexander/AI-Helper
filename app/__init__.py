@@ -1,0 +1,1 @@
+"""AI-Helper application package."""
