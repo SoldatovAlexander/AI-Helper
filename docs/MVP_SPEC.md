@@ -5,6 +5,23 @@
 **LLM:** DeepSeek (`deepseek-flash` by default; configurable).  
 **Goal:** Produce useful SEO copy without inventing technical characteristics.
 
+> **Implementation checkpoint:** FastAPI HTTP bootstrap, `GET /health`, `GET /docs`, Docker image, Compose configuration, and offline health smoke tests are now implemented. The generation endpoint, DeepSeek adapter, request-ID middleware, advanced logging, output validation, and browser UI are still planned.
+
+### Docker bootstrap (implemented)
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+docker compose ps
+curl http://127.0.0.1:8000/health
+docker compose logs -f ai-helper
+docker compose down
+```
+
+The Compose service uses a single Python container; port publishing is limited to localhost and can be changed with `AI_HELPER_PORT`. It runs under a non-root user, uses a read-only root filesystem and a small writable `/tmp`, and defines a process-level Docker HEALTHCHECK using `/health`. DeepSeek is **not** called by the health check. `.env` must be created locally before running Compose and is excluded from the image build context. This is a **local development startup option**, not a production deployment.
+
+To run bootstrap tests without Docker: `pip install -r requirements-dev.txt && pytest -q`. These initial tests do not cover generation quality.
+
 ## 1. Design principles
 
 1. **Source of truth:** `name`, `manufacturer`, and technical `specs` are controlled by the Python service, never authored by the LLM.
@@ -264,7 +281,7 @@ The UI explicitly labels content as a **draft requiring review**. No authenticat
 
 ## 9. Implementation plan and non-goals
 
-**Phase A:** configuration, models, request ID middleware, `/health`.  
+**Phase A:** HTTP bootstrap and `/health` (implemented); configuration, models, and request ID middleware remain planned.  
 **Phase B:** DeepSeek provider, versioned prompt, `GenerationService`.  
 **Phase C:** fact validation, errors, logging, tests.  
 **Phase D:** lightweight UI, Markdown export, examples, README proofread.  
