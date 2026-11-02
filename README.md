@@ -133,7 +133,7 @@ References: [DeepSeek API docs](https://api-docs.deepseek.com/) · [JSON Output]
 - Verify that raw API keys and complete technical passports are not written to logs.
 - Exercise generation paths with a fake provider; no live API key needed for tests.
 
-See [test matrix and acceptance criteria](docs/MVP_SPEC.md#test-matrix--acceptance-criteria).
+See [test matrix and acceptance criteria](docs/MVP_SPEC.md#8-test-matrix--acceptance-criteria).
 
 ## Documentation
 
