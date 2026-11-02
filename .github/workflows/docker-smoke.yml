@@ -24,11 +24,13 @@ jobs:
       - name: Run offline tests
         run: python -m pytest -q
 
-      - name: Build image
-        run: docker build --tag ai-helper:ci .
+      - name: Prepare environment and validate Compose
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
 
-      - name: Start container
-        run: docker run --detach --name ai-helper-smoke --publish 127.0.0.1:8000:8000 ai-helper:ci
+      - name: Build and start with Docker Compose
+        run: docker compose up --build --detach
 
       - name: Check API health over HTTP
         run: |
@@ -39,9 +41,9 @@ jobs:
             fi
             sleep 1
           done
-          docker logs ai-helper-smoke
+          docker compose logs ai-helper
           exit 1
 
       - name: Stop container
         if: always()
-        run: docker rm --force ai-helper-smoke || true
+        run: docker compose down --remove-orphans || true
