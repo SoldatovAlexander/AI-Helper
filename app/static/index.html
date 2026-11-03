@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI-Helper — карточка товара</title>
+  <style>
+    :root{font-family:system-ui,sans-serif;color:#182436;background:#f1f5f9}body{max-width:1200px;margin:auto;padding:28px}h1{margin-bottom:4px}p{line-height:1.5}.muted{color:#526277}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.panel{background:white;border:1px solid #dbe3ec;border-radius:12px;padding:22px;min-width:0}label{display:block;font-weight:650;margin:16px 0 6px}input,textarea,select{box-sizing:border-box;width:100%;padding:10px;border:1px solid #a9b8ca;border-radius:6px;font:inherit}textarea{resize:vertical}button{background:#1459a5;color:white;border:0;border-radius:6px;padding:11px 16px;font:inherit;cursor:pointer;margin:14px 6px 0 0}button:disabled{opacity:.55;cursor:default}button.secondary{background:#e8eef6;color:#20344c}pre{white-space:pre-wrap;word-break:break-word;line-height:1.5;background:#f6f8fb;border-radius:6px;padding:14px}#message{color:#9a351f;white-space:pre-wrap}small{color:#526277}[hidden]{display:none!important}@media(max-width:760px){.grid{grid-template-columns:1fr}body{padding:14px}}
+  </style>
+</head>
+<body>
+  <h1>AI-Helper</h1>
+  <p class="muted">Черновик карточки прибора по вашим данным. Перед публикацией проверьте текст и характеристики.</p>
+  <div class="grid">
+    <section class="panel">
+      <h2>Данные товара</h2>
+      <label for="input-mode">Способ ввода</label>
+      <select id="input-mode"><option value="form">Форма</option><option value="json">JSON</option></select>
+      <form id="form">
+        <div id="form-fields">
+          <label for="name">Название *</label><input id="name" maxlength="500">
+          <label for="manufacturer">Производитель *</label><input id="manufacturer" maxlength="500">
+          <label for="specs">Характеристики в формате JSON</label><textarea id="specs" rows="7" spellcheck="false">{}</textarea>
+          <small>Например: {"диапазон измерений": "0–1,6 МПа"}. Пустое значение будет отмечено как «данных нет».</small>
+          <label for="description">Описание или фрагмент паспорта</label><textarea id="description" rows="6" maxlength="20000"></textarea>
+        </div>
+        <div id="json-fields" hidden>
+          <label for="product-json">JSON товара</label>
+          <textarea id="product-json" rows="14" spellcheck="false">{
+  "name": "",
+  "manufacturer": "",
+  "specs": {},
+  "description": ""
+}</textarea>
+        </div>
+        <label><input id="web-search" type="checkbox" style="width:auto"> Найти сведения о назначении в интернете</label>
+        <small>Название и производитель будут отправлены в поиск DeepSeek. Поиск может оплачиваться отдельно; найденные сведения нужно проверить.</small><br>
+        <button id="submit">Создать черновик</button>
+      </form>
+      <p id="message" role="alert"></p>
+    </section>
+    <section class="panel">
+      <h2>Данные, отправленные модели</h2>
+      <p class="muted">JSON товара после проверки и, если поиск включён, найденные выдержки. Системные инструкции передаются модели отдельно.</p>
+      <pre id="model-input">Появятся после создания черновика.</pre>
+      <h2>Результат</h2>
+      <label for="format">Формат ответа</label>
+      <select id="format"><option value="json">JSON</option><option value="markdown">Markdown</option><option value="text">Текст</option></select>
+      <button class="secondary" id="copy" disabled>Копировать результат</button>
+      <pre id="result" aria-live="polite">Здесь появится ответ сервиса.</pre>
+    </section>
+  </div>
+<script>
+const $ = selector => document.querySelector(selector);
+const form = $('#form'), result = $('#result'), modelInput = $('#model-input'), message = $('#message');
+const submit = $('#submit'), copy = $('#copy'), format = $('#format'), inputMode = $('#input-mode');
+let card = null;
+inputMode.addEventListener('change', () => {
+  $('#form-fields').hidden = inputMode.value !== 'form';
+  $('#json-fields').hidden = inputMode.value !== 'json';
+});
+function renderCard(data, kind) {
+  if (kind === 'json') return JSON.stringify(data, null, 2);
+  const markdown = kind === 'markdown';
+  const header = text => markdown ? `## ${text}` : text.toUpperCase();
+  const list = entries => entries.length ? entries.map(item => `${markdown ? '- ' : '• '}${item}`).join('\n') : 'данных нет';
+  const specs = Object.entries(data.specs).map(([key, value]) => `${key}: ${value}`);
+  return [
+    `${header('Карточка товара')}\n${data.name}\nПроизводитель: ${data.manufacturer}\nСтатус: ${data.status}`,
+    `${header('SEO-заголовок')}\n${data.seo_title}`,
+    `${header('SEO-описание')}\n${data.seo_description}`,
+    `${header('Характеристики')}\n${list(specs)}`,
+    `${header('Поисковые запросы')}\n${list(data.search_queries)}`,
+    `${header('Commercial-блок')}\n${data.commercial_block || 'данных нет'}`,
+    `${header('Недостающие данные')}\n${list(data.missing_fields)}`,
+    `${header('Предупреждения')}\n${list(data.warnings)}`,
+    ...(data.search_status ? [`${header('Поиск')}\n${data.search_status}\n${list((data.sources || []).map(source => `${source.title}\n${source.url}\n${source.excerpt}`))}`] : [])
+  ].join('\n\n');
+}
+format.addEventListener('change', () => { if (card) result.textContent = renderCard(card, format.value); });
+form.addEventListener('submit', async event => {
+  event.preventDefault(); message.textContent = ''; copy.disabled = true; card = null;
+  result.textContent = ''; modelInput.textContent = 'Появятся после создания черновика.';
+  let product;
+  try {
+    if (inputMode.value === 'json') {
+      product = JSON.parse($('#product-json').value);
+      if (!product || Array.isArray(product) || typeof product !== 'object') throw new Error('JSON товара должен быть объектом.');
+    } else {
+      const specs = JSON.parse($('#specs').value);
+      if (!specs || Array.isArray(specs) || typeof specs !== 'object' || Object.values(specs).some(value => typeof value !== 'string')) throw new Error('Характеристики должны быть JSON-объектом со строковыми значениями.');
+      product = {name: $('#name').value, manufacturer: $('#manufacturer').value, specs, description: $('#description').value};
+    }
+  } catch (error) { message.textContent = error instanceof SyntaxError ? 'Проверьте синтаксис JSON.' : error.message; return; }
+  submit.disabled = true; result.textContent = 'Создаём черновик…';
+  try {
+    const url = $('#web-search').checked ? '/generate?web_search=true' : '/generate';
+    const response = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(product)});
+    const data = await response.json();
+    if (!response.ok) { message.textContent = typeof data.detail === 'string' ? data.detail : 'Проверьте входные данные.'; result.textContent = ''; return; }
+    const {model_input, ...output} = data;
+    modelInput.textContent = JSON.stringify(model_input, null, 2);
+    card = output; result.textContent = renderCard(card, format.value); copy.disabled = false;
+  } catch { message.textContent = 'Не удалось получить ответ сервиса.'; result.textContent = ''; }
+  finally { submit.disabled = false; }
+});
+copy.addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(result.textContent); message.textContent = 'Результат скопирован.'; }
+  catch { message.textContent = 'Не удалось скопировать автоматически. Выделите текст результата вручную.'; }
+});
+</script>
+</body></html>

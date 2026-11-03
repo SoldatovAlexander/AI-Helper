@@ -24,6 +24,9 @@ jobs:
       - name: Run offline tests
         run: python -m pytest -q
 
+      - name: Run linter
+        run: python -m ruff check app tests
+
       - name: Prepare environment and validate Compose
         run: |
           cp .env.example .env
