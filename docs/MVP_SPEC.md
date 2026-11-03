@@ -22,13 +22,25 @@ The Compose service uses a single Python container; port publishing is limited t
 
 To run bootstrap tests without Docker: `pip install -r requirements-dev.txt && pytest -q`. These initial tests do not cover generation quality.
 
+### Data-quality extension (design only, not yet implemented)
+
+The externally supplied [SOUZ-PRIBOR YML feed](https://www.souz-pribor.ru/yml/any/feed.xml) is a **candidate data source**, not an inspected source file. The design permits a **local-file-only optional adapter** to produce JSON examples for two offers. Exact-configuration facts, model-family options, contradictory values and missing fields must be treated separately; provenance is recorded in optional internal sidecar evidence. This does not change the original simple `POST /generate` JSON contract or the one-pass DeepSeek generation choice.
+
+Design artifacts:
+- [YML normalization and provenance](YML_DATA_PIPELINE.md)
+- [Quality evaluation and baseline comparison](QUALITY_EVALUATION.md)
+- [Prompt design](PROMPT_STRATEGY.md) and [draft version 1](../prompts/product_card_v1.md)
+
+Do not claim extraction results, catalog completeness, product counts or quality improvement before processing actual source bytes and evaluating model outputs.
+
+
 ## 1. Design principles
 
 1. **Source of truth:** `name`, `manufacturer`, and technical `specs` are controlled by the Python service, never authored by the LLM.
 2. **One model call per draft** under normal conditions. A limited retry is allowed only when the provider output is invalid or a transient API failure occurs.
 3. **Separate concerns:** API endpoints perform transport work; `GenerationService` orchestrates the workflow; the provider adapter handles DeepSeek; the validator checks the draft; formatters produce JSON/Markdown.
 4. **Conservative failure behavior:** When evidence is insufficient, return an explicit clarification request or a labeled incomplete draft rather than inventing facts merely to fill 800–1,200 characters.
-5. **Minimal external dependencies:** No queue, broker, cache, database, Docker, or CMS integration in MVP.
+5. **Minimal external dependencies:** Docker Compose is available for local development. No queue, broker, cache, database, external CMS, or production deployment in MVP.
 6. **Observable by default:** `request_id`, structured events, latency measurements, no sensitive payloads in logs.
 7. **Human review:** A `passed` automated check is not a guarantee that prose is factually correct.
 
@@ -65,7 +77,7 @@ app/
   services/generator.py
   services/validator.py
   providers/deepseek.py
-  prompts/product_card.md
+  prompts/ (see repository-level prompts/product_card_v1.md)
   templates/index.html
 tests/
 docs/MVP_SPEC.md

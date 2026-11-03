@@ -68,6 +68,14 @@ A validator can find many obvious problems, but it cannot mathematically prove s
 
 Detailed decisions: [MVP specification](docs/MVP_SPEC.md).
 
+### Data quality & YML feed plan / Качество данных и YML (design-stage)
+
+The supplied [SOUZ-PRIBOR YML feed](https://www.souz-pribor.ru/yml/any/feed.xml) is a proposed **input source**, not yet a verified data fixture: the XML could not be fetched in this authoring environment, and its actual item count, schema deviations and attribute completeness remain **unconfirmed**.
+
+The next improvement targets **provenance-aware preprocessing** before the same one-pass DeepSeek flow: read a local YML copy, extract two representative product inputs, distinguish **exact-execution facts**, **model-family/optional variants** and **missing/conflicting data**, and present explicit warnings instead of claiming every available option belongs to one instrument.
+
+The parser, automated quality rubric and improved prompt are documented but **not yet implemented/integrated**. Reference docs: [YML data pipeline](docs/YML_DATA_PIPELINE.md), [evaluation plan](docs/QUALITY_EVALUATION.md), [prompt strategy](docs/PROMPT_STRATEGY.md), [prompt v1](prompts/product_card_v1.md).
+
 ## Input & Output Contracts (planned)
 
 Illustrative input **only** — the passport excerpt is incomplete and must not be treated as a real product datasheet:
@@ -169,6 +177,10 @@ See [test matrix and acceptance criteria](docs/MVP_SPEC.md#8-test-matrix--accept
 | Document | Purpose |
 | --- | --- |
 | [MVP Specification](docs/MVP_SPEC.md) | Contracts, flow, logging, errors, test matrix, acceptance criteria |
+| [YML Data Pipeline](docs/YML_DATA_PIPELINE.md) | Feed-to-JSON import, provenance, model variants, missing data, safety |
+| [Quality Evaluation](docs/QUALITY_EVALUATION.md) | Baseline vs improved experiment, metrics, reviewer protocol |
+| [Prompt Strategy](docs/PROMPT_STRATEGY.md) | One-pass generation rules, trust boundaries, output checks |
+| [Prompt Draft v1](prompts/product_card_v1.md) | Versioned DeepSeek system-prompt design (not integrated yet) |
 | [`.env.example`](.env.example) | Example local configuration |
 | [`.gitignore`](.gitignore) | Exclusions for local secrets and artifacts |
 | [Dockerfile](Dockerfile) / [compose.yaml](compose.yaml) | Minimal container image and local startup |
@@ -178,9 +190,9 @@ See [test matrix and acceptance criteria](docs/MVP_SPEC.md#8-test-matrix--accept
 ## Roadmap
 
 1. **Done:** README, technical contracts, Docker/Compose, FastAPI bootstrap, `/health` and smoke tests.
-2. **Next:** DeepSeek adapter, `POST /generate`, validation, structured logs, request IDs and UI.
-3. **Evaluation:** run on both employer-provided products; inspect accuracy and usability.
-4. **Later, if justified:** extraction of passport facts, review workflow, persistent jobs, Redis cache or RabbitMQ queue.
+2. **Next:** DeepSeek adapter, `POST /generate`, fact validation, structured logs, request IDs and UI.
+3. **Data evaluation:** inspect the real YML file when available, convert two selected offers into JSON, compare baseline vs grounded generation and inspect variant-specific facts.
+4. **Later, if justified:** automatic full-catalog import, manufacturer passport cross-checking, review workflow, Redis cache or RabbitMQ queue.
 
 The assignment mentions **two** provided products, but only one abbreviated example appears in the task text currently available. Two authentic sample outputs will be added when the complete product inputs are supplied. Synthetic examples, if used for tests, will be explicitly labeled.
 
